@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Parallax 3D Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  #header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #c8c8ff;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: #d0d0f8;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(180,180,255,0.4); }
+  .btn.active { background: rgba(120,100,255,0.25); border-color: rgba(150,130,255,0.6); color: #b8b0ff; }
+
+  label.btn { display: inline-block; }
+
+  #fileInput { display: none; }
+
+  #status-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 6px 20px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+    color: #888;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #444;
+    display: inline-block;
+    margin-right: 5px;
+    transition: background 0.3s;
+  }
+  .status-dot.green { background: #4cff8c; box-shadow: 0 0 6px #4cff8c88; }
+  .status-dot.yellow { background: #ffd84c; box-shadow: 0 0 6px #ffd84c88; }
+  .status-dot.red { background: #ff5c5c; }
+
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 50%, #12102a 0%, #070710 100%);
+  }
+
+  #three-canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  #webcam-preview {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 160px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: #000;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  }
+
+  #webcam {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: block;
+  }
+
+  #face-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    transform: scaleX(-1);
+    pointer-events: none;
+  }
+
+  #sensitivity-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+  }
+
+  #sensitivity {
+    -webkit-appearance: none;
+    width: 90px;
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  #sensitivity::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #8878ff;
+    cursor: pointer;
+  }
+
+  #overlay-msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    pointer-events: none;
+    z-index: 10;
+    text-align: center;
+    padding: 20px;
+  }
+
+  #overlay-msg .big { font-size: 40px; }
+  #overlay-msg .msg { font-size: 14px; color: #777; max-width: 280px; line-height: 1.5; }
+  #overlay-msg.hidden { display: none; }
+
+  #drop-zone {
+    position: absolute;
+    inset: 0;
+    border: 2px dashed rgba(120,100,255,0.5);
+    border-radius: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #9988ff;
+    background: rgba(80,60,200,0.08);
+    z-index: 20;
+    pointer-events: none;
+  }
+  #drop-zone.active { display: flex; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>⬡ Face Parallax 3D</h1>
+  <div class="controls">
+    <button class="btn" id="camBtn">📷 Start Camera</button>
+    <label class="btn" for="fileInput">📂 Load 3D Model</label>
+    <input type="file" id="fileInput" accept=".glb,.gltf,.obj">
+    <div id="sensitivity-wrap">
+      <span>Sensitivity</span>
+      <input type="range" id="sensitivity" min="1" max="10" value="5" step="0.5">
+    </div>
+    <button class="btn" id="resetBtn">↺ Reset</button>
+  </div>
+</div>
+
+<div id="status-bar">
+  <span><span class="status-dot" id="dot-cam"></span>Camera</span>
+  <span><span class="status-dot" id="dot-face"></span>Face tracking</span>
+  <span><span class="status-dot" id="dot-model"></span>Model</span>
+  <span id="fps-label" style="margin-left:auto">-- fps</span>
+</div>
+
+<div id="main">
+  <div id="canvas-container">
+    <canvas id="three-canvas"></canvas>
+
+    <div id="overlay-msg">
+      <div class="big">🧊</div>
+      <div class="msg">Click <strong>Start Camera</strong> to enable face-tracking parallax, or load a custom GLB/OBJ model.</div>
+    </div>
+
+    <div id="drop-zone">Drop GLB / GLTF / OBJ here</div>
+
+    <div id="webcam-preview" style="display:none">
+      <video id="webcam" autoplay muted playsinline></video>
+      <canvas id="face-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js + loaders -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<!-- MediaPipe Face Mesh -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+<script>
+// ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('three-canvas');
+const container = document.getElementById('canvas-container');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x070710, 0.04);
+
+const camera3d = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera3d.position.set(0, 0, 5);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0x8888cc, 0.5);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(5, 8, 6);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+const rimLight = new THREE.DirectionalLight(0x6644ff, 0.6);
+rimLight.position.set(-4, 2, -4);
+scene.add(rimLight);
+
+const pointLight = new THREE.PointLight(0x44aaff, 0.8, 20);
+pointLight.position.set(-3, 3, 3);
+scene.add(pointLight);
+
+// Grid / floor hint
+const gridHelper = new THREE.GridHelper(12, 20, 0x222244, 0x111133);
+gridHelper.position.y = -2;
+scene.add(gridHelper);
+
+// ─── DEFAULT CUBE ─────────────────────────────────────────────────────────────
+let modelGroup = new THREE.Group();
+scene.add(modelGroup);
+
+function makeDefaultCube() {
+  modelGroup.clear();
+
+  const geo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x7766ff,
+    metalness: 0.4,
+    roughness: 0.3,
+    envMapIntensity: 0.8,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  modelGroup.add(mesh);
+
+  // Edge glow
+  const edges = new THREE.EdgesGeometry(geo);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0xaaaaff, transparent: true, opacity: 0.5 });
+  const wireframe = new THREE.LineSegments(edges, lineMat);
+  modelGroup.add(wireframe);
+
+  // Small orbiting sphere
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xff6688, emissive: 0x441122, metalness: 0.5, roughness: 0.3 })
+  );
+  sphere.position.set(1.5, 0, 0);
+  sphere.name = 'orbiter';
+  modelGroup.add(sphere);
+
+  updateStatus('model', true);
+}
+makeDefaultCube();
+
+// Environment map for reflections
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+const envTexture = pmremGenerator.fromScene(new THREE.RoomEnvironment()).texture;
+scene.environment = envTexture;
+
+// ─── RESIZE ───────────────────────────────────────────────────────────────────
+function onResize() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  renderer.setSize(w, h);
+  camera3d.aspect = w / h;
+  camera3d.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(onResize);
+ro.observe(container);
+onResize();
+
+// ─── FACE TRACKING STATE ──────────────────────────────────────────────────────
+let faceX = 0, faceY = 0; // normalized -1 to 1
+let smoothX = 0, smoothY = 0;
+let faceDetected = false;
+let cameraRunning = false;
+
+const SMOOTHING = 0.12;
+
+// ─── ANIMATION LOOP ───────────────────────────────────────────────────────────
+let lastTime = performance.now();
+let frameCount = 0;
+let fps = 0;
+
+function getSensitivity() {
+  return parseFloat(document.getElementById('sensitivity').value) * 0.06;
+}
+
+const overlayMsg = document.getElementById('overlay-msg');
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const now = performance.now();
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+  frameCount++;
+  if (frameCount % 30 === 0) {
+    fps = Math.round(1 / dt);
+    document.getElementById('fps-label').textContent = fps + ' fps';
+  }
+
+  // Smooth face position
+  smoothX += (faceX - smoothX) * SMOOTHING;
+  smoothY += (faceY - smoothY) * SMOOTHING;
+
+  const sens = getSensitivity();
+
+  if (cameraRunning) {
+    // Parallax: rotate model based on face position
+    modelGroup.rotation.y = smoothX * sens * Math.PI;
+    modelGroup.rotation.x = -smoothY * sens * Math.PI * 0.7;
+  } else {
+    // Gentle idle rotation
+    modelGroup.rotation.y += 0.004;
+    modelGroup.rotation.x = Math.sin(now * 0.0005) * 0.15;
+  }
+
+  // Orbit the little sphere if default model
+  const orbiter = modelGroup.getObjectByName('orbiter');
+  if (orbiter) {
+    const t = now * 0.001;
+    orbiter.position.x = Math.cos(t * 1.2) * 1.5;
+    orbiter.position.z = Math.sin(t * 1.2) * 1.5;
+    orbiter.position.y = Math.sin(t * 0.8) * 0.5;
+  }
+
+  renderer.render(scene, camera3d);
+}
+animate();
+
+// ─── MEDIAPIPE FACE MESH ──────────────────────────────────────────────────────
+const videoEl = document.getElementById('webcam');
+const faceCanvasEl = document.getElementById('face-canvas');
+const faceCtx = faceCanvasEl.getContext('2d');
+
+let faceMesh = null;
+
+function initFaceMesh() {
+  faceMesh = new FaceMesh({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+  });
+
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.6,
+    minTrackingConfidence: 0.6,
+  });
+
+  faceMesh.onResults(onFaceResults);
+}
+
+function onFaceResults(results) {
+  // Resize face canvas to match video
+  faceCanvasEl.width = videoEl.videoWidth;
+  faceCanvasEl.height = videoEl.videoHeight;
+  faceCtx.clearRect(0, 0, faceCanvasEl.width, faceCanvasEl.height);
+
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    faceDetected = true;
+    updateStatus('face', true);
+
+    const lm = results.multiFaceLandmarks[0];
+
+    // Use nose tip (landmark 1) as center reference
+    // and bounding box to normalize
+    let minX = 1, maxX = 0, minY = 1, maxY = 0;
+    for (const p of lm) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    // Convert to -1..1 from screen center (mirrored X because we mirror video)
+    faceX = -(cx - 0.5) * 2;
+    faceY = -(cy - 0.5) * 2;
+
+    // Draw minimal dot for nose tip
+    const noseTip = lm[1];
+    faceCtx.beginPath();
+    faceCtx.arc(
+      noseTip.x * faceCanvasEl.width,
+      noseTip.y * faceCanvasEl.height,
+      5, 0, Math.PI * 2
+    );
+    faceCtx.fillStyle = 'rgba(120, 200, 255, 0.85)';
+    faceCtx.fill();
+
+    // Cross-hair
+    const cx2 = cx * faceCanvasEl.width;
+    const cy2 = cy * faceCanvasEl.height;
+    faceCtx.strokeStyle = 'rgba(120,200,255,0.5)';
+    faceCtx.lineWidth = 1;
+    faceCtx.beginPath();
+    faceCtx.moveTo(cx2 - 12, cy2); faceCtx.lineTo(cx2 + 12, cy2);
+    faceCtx.moveTo(cx2, cy2 - 12); faceCtx.lineTo(cx2, cy2 + 12);
+    faceCtx.stroke();
+
+  } else {
+    faceDetected = false;
+    updateStatus('face', false);
+    // Gently return to center
+    faceX *= 0.9;
+    faceY *= 0.9;
+  }
+}
+
+// ─── CAMERA START/STOP ────────────────────────────────────────────────────────
+let mpCamera = null;
+
+async function startCamera() {
+  if (!faceMesh) initFaceMesh();
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+
+    document.getElementById('webcam-preview').style.display = 'block';
+    overlayMsg.classList.add('hidden');
+    updateStatus('cam', true);
+    cameraRunning = true;
+    document.getElementById('camBtn').textContent = '⏹ Stop Camera';
+    document.getElementById('camBtn').classList.add('active');
+
+    mpCamera = new Camera(videoEl, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoEl });
+      },
+      width: 640,
+      height: 480,
+    });
+    mpCamera.start();
+
+  } catch (err) {
+    alert('Camera access denied or unavailable: ' + err.message);
+    updateStatus('cam', false);
+  }
+}
+
+function stopCamera() {
+  if (mpCamera) { mpCamera.stop(); mpCamera = null; }
+  if (videoEl.srcObject) {
+    videoEl.srcObject.getTracks().forEach(t => t.stop());
+    videoEl.srcObject = null;
+  }
+  document.getElementById('webcam-preview').style.display = 'none';
+  updateStatus('cam', false);
+  updateStatus('face', false);
+  cameraRunning = false;
+  faceX = 0; faceY = 0;
+  document.getElementById('camBtn').textContent = '📷 Start Camera';
+  document.getElementById('camBtn').classList.remove('active');
+  overlayMsg.classList.remove('hidden');
+}
+
+document.getElementById('camBtn').addEventListener('click', () => {
+  if (!cameraRunning) startCamera();
+  else stopCamera();
+});
+
+// ─── MODEL LOADER ─────────────────────────────────────────────────────────────
+const gltfLoader = new THREE.GLTFLoader();
+const objLoader = new THREE.OBJLoader();
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadModelFile(file);
+  e.target.value = '';
+});
+
+function loadModelFile(file) {
+  const url = URL.createObjectURL(file);
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  overlayMsg.classList.remove('hidden');
+  overlayMsg.querySelector('.big').textContent = '⏳';
+  overlayMsg.querySelector('.msg').textContent = 'Loading model…';
+
+  if (ext === 'glb' || ext === 'gltf') {
+    gltfLoader.load(url, (gltf) => {
+      setModel(gltf.scene, url);
+    }, undefined, (err) => {
+      alert('Error loading GLTF: ' + err.message);
+      overlayMsg.classList.add('hidden');
+    });
+  } else if (ext === 'obj') {
+    objLoader.load(url, (obj) => {
+      // Auto-assign material if missing
+      obj.traverse(child => {
+        if (child.isMesh && !child.material.color) {
+          child.material = new THREE.MeshStandardMaterial({ color: 0x8877ff, metalness: 0.3, roughness: 0.4 });
+        }
+      });
+      setModel(obj, url);
+    }, undefined, (err) => {
+      alert('Error loading OBJ: ' + err.message);
+      overlayMsg.classList.add('hidden');
+    });
+  } else {
+    alert('Unsupported format. Please use GLB, GLTF, or OBJ.');
+    overlayMsg.classList.add('hidden');
+  }
+}
+
+function setModel(object, blobUrl) {
+  // Center and scale
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const scale = 2.5 / maxDim;
+
+  object.scale.setScalar(scale);
+  object.position.sub(center.multiplyScalar(scale));
+
+  object.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+
+  modelGroup.clear();
+  modelGroup.add(object);
+
+  URL.revokeObjectURL(blobUrl);
+  overlayMsg.classList.add('hidden');
+  updateStatus('model', true);
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const mainEl = document.getElementById('main');
+
+mainEl.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+mainEl.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+mainEl.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file) loadModelFile(file);
+});
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', () => {
+  makeDefaultCube();
+  faceX = 0; faceY = 0; smoothX = 0; smoothY = 0;
+  modelGroup.rotation.set(0, 0, 0);
+});
+
+// ─── STATUS DOTS ─────────────────────────────────────────────────────────────
+function updateStatus(which, ok) {
+  const dot = document.getElementById('dot-' + which);
+  if (!dot) return;
+  dot.className = 'status-dot ' + (ok ? (which === 'face' ? 'green' : 'green') : 'red');
+  if (!ok) dot.className = 'status-dot';
+}
+updateStatus('model', true);
+
+// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'c' || e.key === 'C') document.getElementById('camBtn').click();
+  if (e.key === 'r' || e.key === 'R') document.getElementById('resetBtn').click();
+});
+</script>
+</body>
+</html>
