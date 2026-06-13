@@ -3,102 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Face Parallax 3D Viewer</title>
+<title>Face Parallax 3D</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  :root {
+    --bg: #000000;
+    --surface: rgba(255,255,255,0.05);
+    --surface-hover: rgba(255,255,255,0.09);
+    --border: rgba(255,255,255,0.1);
+    --text: #f5f5f7;
+    --text-secondary: rgba(255,255,255,0.45);
+    --accent: #0a84ff;
+    --accent-hover: #409cff;
+    --green: #30d158;
+    --red: #ff453a;
+    --radius: 10px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  }
+
   body {
-    background: #0a0a0f;
-    color: #e0e0f0;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
     height: 100vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
   }
 
   #header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    background: rgba(255,255,255,0.03);
-    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 0 24px;
+    height: 52px;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 16px;
   }
 
   #header h1 {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    color: #c8c8ff;
+    letter-spacing: -0.01em;
+    color: var(--text);
     white-space: nowrap;
+    opacity: 0.9;
   }
 
   .controls {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-    flex-wrap: wrap;
   }
 
   .btn {
-    padding: 7px 16px;
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.06);
-    color: #d0d0f8;
-    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 980px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap;
+    letter-spacing: -0.01em;
   }
-  .btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(180,180,255,0.4); }
-  .btn.active { background: rgba(120,100,255,0.25); border-color: rgba(150,130,255,0.6); color: #b8b0ff; }
+  .btn:hover {
+    background: var(--surface-hover);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .btn.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 500;
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.destructive {
+    background: rgba(255,69,58,0.15);
+    border-color: rgba(255,69,58,0.3);
+    color: var(--red);
+  }
+  .btn.destructive:hover { background: rgba(255,69,58,0.22); }
 
   label.btn { display: inline-block; }
-
   #fileInput { display: none; }
 
+  #sens-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 3px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  /* Status bar */
   #status-bar {
     display: flex;
-    gap: 16px;
+    gap: 20px;
     align-items: center;
-    padding: 6px 20px;
-    background: rgba(0,0,0,0.3);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 12px;
-    color: #888;
+    padding: 0 24px;
+    height: 32px;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-secondary);
     flex-shrink: 0;
-    flex-wrap: wrap;
+    letter-spacing: -0.01em;
   }
 
-  .status-dot {
-    width: 7px; height: 7px;
+  .status-item { display: flex; align-items: center; gap: 5px; }
+
+  .dot {
+    width: 6px; height: 6px;
     border-radius: 50%;
-    background: #444;
-    display: inline-block;
-    margin-right: 5px;
-    transition: background 0.3s;
+    background: rgba(255,255,255,0.15);
+    transition: background 0.3s, box-shadow 0.3s;
   }
-  .status-dot.green { background: #4cff8c; box-shadow: 0 0 6px #4cff8c88; }
-  .status-dot.yellow { background: #ffd84c; box-shadow: 0 0 6px #ffd84c88; }
-  .status-dot.red { background: #ff5c5c; }
+  .dot.on  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .dot.off { background: rgba(255,255,255,0.12); }
 
+  #fps { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  /* Main */
   #main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-  }
-
-  #canvas-container {
     flex: 1;
     position: relative;
     overflow: hidden;
-    background: radial-gradient(ellipse at 50% 50%, #12102a 0%, #070710 100%);
   }
 
   #three-canvas {
@@ -107,92 +167,72 @@
     height: 100% !important;
   }
 
-  #webcam-preview {
+  /* Webcam pip */
+  #pip {
     position: absolute;
-    bottom: 16px;
-    right: 16px;
-    width: 160px;
-    height: 120px;
-    border-radius: 8px;
+    bottom: 20px;
+    right: 20px;
+    width: 148px;
+    height: 110px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: #000;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    background: #111;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.05);
+    display: none;
   }
-
   #webcam {
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     object-fit: cover;
     transform: scaleX(-1);
     display: block;
   }
-
   #face-canvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: absolute; top:0; left:0;
+    width:100%; height:100%;
     transform: scaleX(-1);
     pointer-events: none;
   }
 
-  #sensitivity-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #999;
-    white-space: nowrap;
-  }
-
-  #sensitivity {
-    -webkit-appearance: none;
-    width: 90px;
-    height: 4px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-  }
-  #sensitivity::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: #8878ff;
-    cursor: pointer;
-  }
-
-  #overlay-msg {
+  /* Overlay */
+  #overlay {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 12px;
     pointer-events: none;
-    z-index: 10;
     text-align: center;
-    padding: 20px;
+    padding: 40px;
   }
+  #overlay .icon { font-size: 36px; opacity: 0.6; }
+  #overlay p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    max-width: 260px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+  #overlay strong { color: rgba(255,255,255,0.6); font-weight: 500; }
+  #overlay.hidden { display: none; }
 
-  #overlay-msg .big { font-size: 40px; }
-  #overlay-msg .msg { font-size: 14px; color: #777; max-width: 280px; line-height: 1.5; }
-  #overlay-msg.hidden { display: none; }
-
+  /* Drop zone */
   #drop-zone {
-    position: absolute;
-    inset: 0;
-    border: 2px dashed rgba(120,100,255,0.5);
-    border-radius: 12px;
+    position: absolute; inset: 0;
+    border: 1.5px dashed rgba(10,132,255,0.4);
+    border-radius: 16px;
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    color: #9988ff;
-    background: rgba(80,60,200,0.08);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    background: rgba(10,132,255,0.05);
     z-index: 20;
     pointer-events: none;
+    letter-spacing: -0.01em;
   }
   #drop-zone.active { display: flex; }
 </style>
@@ -200,253 +240,187 @@
 <body>
 
 <div id="header">
-  <h1>⬡ Face Parallax 3D</h1>
+  <h1>Face Parallax</h1>
   <div class="controls">
-    <button class="btn" id="camBtn">📷 Start Camera</button>
-    <label class="btn" for="fileInput">📂 Load 3D Model</label>
+    <button class="btn primary" id="camBtn">Start Camera</button>
+    <label class="btn" for="fileInput">Load Model</label>
     <input type="file" id="fileInput" accept=".glb,.gltf,.obj">
-    <div id="sensitivity-wrap">
+    <div id="sens-wrap">
       <span>Sensitivity</span>
       <input type="range" id="sensitivity" min="1" max="10" value="5" step="0.5">
     </div>
-    <button class="btn" id="resetBtn">↺ Reset</button>
+    <button class="btn" id="resetBtn">Reset</button>
   </div>
 </div>
 
 <div id="status-bar">
-  <span><span class="status-dot" id="dot-cam"></span>Camera</span>
-  <span><span class="status-dot" id="dot-face"></span>Face tracking</span>
-  <span><span class="status-dot" id="dot-model"></span>Model</span>
-  <span id="fps-label" style="margin-left:auto">-- fps</span>
+  <div class="status-item"><div class="dot off" id="dot-cam"></div><span>Camera</span></div>
+  <div class="status-item"><div class="dot off" id="dot-face"></div><span>Face</span></div>
+  <div class="status-item"><div class="dot on"  id="dot-model"></div><span>Model</span></div>
+  <span id="fps">— fps</span>
 </div>
 
 <div id="main">
-  <div id="canvas-container">
-    <canvas id="three-canvas"></canvas>
+  <canvas id="three-canvas"></canvas>
 
-    <div id="overlay-msg">
-      <div class="big">🧊</div>
-      <div class="msg">Click <strong>Start Camera</strong> to enable face-tracking parallax, or load a custom GLB/OBJ model.</div>
-    </div>
+  <div id="overlay">
+    <div class="icon">⬡</div>
+    <p>Click <strong>Start Camera</strong> to enable face-tracking parallax. Drop a GLB, GLTF, or OBJ to load a custom model.</p>
+  </div>
 
-    <div id="drop-zone">Drop GLB / GLTF / OBJ here</div>
+  <div id="drop-zone">Drop model here</div>
 
-    <div id="webcam-preview" style="display:none">
-      <video id="webcam" autoplay muted playsinline></video>
-      <canvas id="face-canvas"></canvas>
-    </div>
+  <div id="pip">
+    <video id="webcam" autoplay muted playsinline></video>
+    <canvas id="face-canvas"></canvas>
   </div>
 </div>
 
-<!-- Three.js + loaders -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-<!-- MediaPipe Face Mesh -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 
 <script>
-// ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
-const canvas = document.getElementById('three-canvas');
-const container = document.getElementById('canvas-container');
+// ── RENDERER ──────────────────────────────────────────────────────────────────
+const canvas  = document.getElementById('three-canvas');
+const mainEl  = document.getElementById('main');
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 1.0;
+renderer.setClearColor(0x000000, 1);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x070710, 0.04);
 
-const camera3d = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-camera3d.position.set(0, 0, 5);
+const cam3d = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+cam3d.position.set(0, 0, 5);
 
-// Lights
-const ambientLight = new THREE.AmbientLight(0x8888cc, 0.5);
-scene.add(ambientLight);
+// ── LIGHTS ────────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-dirLight.position.set(5, 8, 6);
-dirLight.castShadow = true;
-scene.add(dirLight);
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(4, 6, 5);
+key.castShadow = true;
+scene.add(key);
 
-const rimLight = new THREE.DirectionalLight(0x6644ff, 0.6);
-rimLight.position.set(-4, 2, -4);
-scene.add(rimLight);
+const fill = new THREE.DirectionalLight(0x88aaff, 0.35);
+fill.position.set(-5, 2, 3);
+scene.add(fill);
 
-const pointLight = new THREE.PointLight(0x44aaff, 0.8, 20);
-pointLight.position.set(-3, 3, 3);
-scene.add(pointLight);
+const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+rim.position.set(0, -4, -4);
+scene.add(rim);
 
-// Grid / floor hint
-const gridHelper = new THREE.GridHelper(12, 20, 0x222244, 0x111133);
-gridHelper.position.y = -2;
-scene.add(gridHelper);
-
-// ─── DEFAULT CUBE ─────────────────────────────────────────────────────────────
-let modelGroup = new THREE.Group();
+// ── DEFAULT CUBE ──────────────────────────────────────────────────────────────
+const modelGroup = new THREE.Group();
 scene.add(modelGroup);
 
 function makeDefaultCube() {
   modelGroup.clear();
 
-  const geo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+  // Clean aluminium-ish material
+  const geo = new THREE.BoxGeometry(1.8, 1.8, 1.8, 1, 1, 1);
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x7766ff,
-    metalness: 0.4,
-    roughness: 0.3,
-    envMapIntensity: 0.8,
+    color: 0xd4d4d8,
+    metalness: 0.65,
+    roughness: 0.2,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   modelGroup.add(mesh);
 
-  // Edge glow
+  // Thin dark edge lines only
   const edges = new THREE.EdgesGeometry(geo);
-  const lineMat = new THREE.LineBasicMaterial({ color: 0xaaaaff, transparent: true, opacity: 0.5 });
-  const wireframe = new THREE.LineSegments(edges, lineMat);
-  modelGroup.add(wireframe);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 });
+  modelGroup.add(new THREE.LineSegments(edges, lineMat));
 
-  // Small orbiting sphere
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 16, 16),
-    new THREE.MeshStandardMaterial({ color: 0xff6688, emissive: 0x441122, metalness: 0.5, roughness: 0.3 })
-  );
-  sphere.position.set(1.5, 0, 0);
-  sphere.name = 'orbiter';
-  modelGroup.add(sphere);
-
-  updateStatus('model', true);
+  setDot('model', true);
 }
 makeDefaultCube();
 
-// Environment map (graceful fallback if PMREMGenerator fails)
-try {
-  const pmremGenerator = new THREE.PMREMGenerator(renderer);
-  pmremGenerator.compileEquirectangularShader();
-  const neutralScene = new THREE.Scene();
-  neutralScene.background = new THREE.Color(0x444466);
-  const envTexture = pmremGenerator.fromScene(neutralScene).texture;
-  scene.environment = envTexture;
-  pmremGenerator.dispose();
-} catch (e) {
-  console.warn('PMREMGenerator skipped:', e);
-}
-
-// ─── RESIZE ───────────────────────────────────────────────────────────────────
+// ── RESIZE ────────────────────────────────────────────────────────────────────
 function onResize() {
-  const w = container.clientWidth;
-  const h = container.clientHeight;
+  const w = mainEl.clientWidth, h = mainEl.clientHeight;
   renderer.setSize(w, h);
-  camera3d.aspect = w / h;
-  camera3d.updateProjectionMatrix();
+  cam3d.aspect = w / h;
+  cam3d.updateProjectionMatrix();
 }
-const ro = new ResizeObserver(onResize);
-ro.observe(container);
+new ResizeObserver(onResize).observe(mainEl);
 onResize();
 
-// ─── FACE TRACKING STATE ──────────────────────────────────────────────────────
-let faceX = 0, faceY = 0; // normalized -1 to 1
-let smoothX = 0, smoothY = 0;
-let faceDetected = false;
+// ── FACE TRACKING STATE ───────────────────────────────────────────────────────
+let faceX = 0, faceY = 0, smoothX = 0, smoothY = 0;
 let cameraRunning = false;
+const SMOOTH = 0.1;
 
-const SMOOTHING = 0.12;
+function getSens() { return parseFloat(document.getElementById('sensitivity').value) * 0.065; }
 
-// ─── ANIMATION LOOP ───────────────────────────────────────────────────────────
-let lastTime = performance.now();
-let frameCount = 0;
-let fps = 0;
-
-function getSensitivity() {
-  return parseFloat(document.getElementById('sensitivity').value) * 0.06;
-}
-
-const overlayMsg = document.getElementById('overlay-msg');
+// ── ANIMATION ─────────────────────────────────────────────────────────────────
+let lastT = performance.now(), frames = 0;
+const overlay = document.getElementById('overlay');
 
 function animate() {
   requestAnimationFrame(animate);
-
   const now = performance.now();
-  const dt = (now - lastTime) / 1000;
-  lastTime = now;
-  frameCount++;
-  if (frameCount % 30 === 0) {
-    fps = Math.round(1 / dt);
-    document.getElementById('fps-label').textContent = fps + ' fps';
+  frames++;
+  if (frames % 30 === 0) {
+    document.getElementById('fps').textContent = Math.round(1000 / (now - lastT) * 30) + ' fps';
   }
+  lastT = now;
 
-  // Smooth face position
-  smoothX += (faceX - smoothX) * SMOOTHING;
-  smoothY += (faceY - smoothY) * SMOOTHING;
+  smoothX += (faceX - smoothX) * SMOOTH;
+  smoothY += (faceY - smoothY) * SMOOTH;
 
-  const sens = getSensitivity();
+  const s = getSens();
 
   if (cameraRunning) {
-    // Parallax: rotate model based on face position
-    modelGroup.rotation.y = smoothX * sens * Math.PI;
-    modelGroup.rotation.x = -smoothY * sens * Math.PI * 0.7;
+    // INVERTED: face goes right → cube rotates right (shows left face)
+    // face goes up → cube tilts up (shows bottom face)
+    modelGroup.rotation.y = smoothX * s * Math.PI;
+    // Y sensitivity boosted (× 1.4 vs X) since vertical head movement is smaller
+    modelGroup.rotation.x = smoothY * s * Math.PI * 1.4;
   } else {
-    // Gentle idle rotation
-    modelGroup.rotation.y += 0.004;
-    modelGroup.rotation.x = Math.sin(now * 0.0005) * 0.15;
+    modelGroup.rotation.y += 0.003;
+    modelGroup.rotation.x = Math.sin(now * 0.0004) * 0.12;
   }
 
-  // Orbit the little sphere if default model
-  const orbiter = modelGroup.getObjectByName('orbiter');
-  if (orbiter) {
-    const t = now * 0.001;
-    orbiter.position.x = Math.cos(t * 1.2) * 1.5;
-    orbiter.position.z = Math.sin(t * 1.2) * 1.5;
-    orbiter.position.y = Math.sin(t * 0.8) * 0.5;
-  }
-
-  renderer.render(scene, camera3d);
+  renderer.render(scene, cam3d);
 }
 animate();
 
-// ─── MEDIAPIPE FACE MESH ──────────────────────────────────────────────────────
-const videoEl = document.getElementById('webcam');
-const faceCanvasEl = document.getElementById('face-canvas');
-const faceCtx = faceCanvasEl.getContext('2d');
-
+// ── MEDIAPIPE ─────────────────────────────────────────────────────────────────
+const videoEl    = document.getElementById('webcam');
+const faceCanvas = document.getElementById('face-canvas');
+const faceCtx    = faceCanvas.getContext('2d');
 let faceMesh = null;
 
 function initFaceMesh() {
   faceMesh = new FaceMesh({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
   });
-
   faceMesh.setOptions({
     maxNumFaces: 1,
-    refineLandmarks: true,
+    refineLandmarks: false,
     minDetectionConfidence: 0.6,
     minTrackingConfidence: 0.6,
   });
-
   faceMesh.onResults(onFaceResults);
 }
 
 function onFaceResults(results) {
-  // Resize face canvas to match video
-  faceCanvasEl.width = videoEl.videoWidth;
-  faceCanvasEl.height = videoEl.videoHeight;
-  faceCtx.clearRect(0, 0, faceCanvasEl.width, faceCanvasEl.height);
+  faceCanvas.width  = videoEl.videoWidth;
+  faceCanvas.height = videoEl.videoHeight;
+  faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
 
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    faceDetected = true;
-    updateStatus('face', true);
-
+    setDot('face', true);
     const lm = results.multiFaceLandmarks[0];
 
-    // Use nose tip (landmark 1) as center reference
-    // and bounding box to normalize
     let minX = 1, maxX = 0, minY = 1, maxY = 0;
     for (const p of lm) {
       if (p.x < minX) minX = p.x;
@@ -454,50 +428,34 @@ function onFaceResults(results) {
       if (p.y < minY) minY = p.y;
       if (p.y > maxY) maxY = p.y;
     }
-
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
 
-    // Convert to -1..1 from screen center (mirrored X because we mirror video)
-    faceX = -(cx - 0.5) * 2;
-    faceY = -(cy - 0.5) * 2;
+    // Raw offset from center (-1 to 1).
+    // No inversion here — the rotation code above maps directly:
+    // face right (cx > 0.5) → positive smoothX → positive rotation.y → cube rotates right ✓
+    // face up (cy < 0.5) → negative rawY → negative smoothY → negative rotation.x → cube tilts back ✓
+    faceX = (cx - 0.5) * 2;
+    faceY = (cy - 0.5) * 2;
 
-    // Draw minimal dot for nose tip
-    const noseTip = lm[1];
+    // Tiny indicator dot on nose tip
+    const n = lm[1];
     faceCtx.beginPath();
-    faceCtx.arc(
-      noseTip.x * faceCanvasEl.width,
-      noseTip.y * faceCanvasEl.height,
-      5, 0, Math.PI * 2
-    );
-    faceCtx.fillStyle = 'rgba(120, 200, 255, 0.85)';
+    faceCtx.arc(n.x * faceCanvas.width, n.y * faceCanvas.height, 4, 0, Math.PI * 2);
+    faceCtx.fillStyle = 'rgba(255,255,255,0.7)';
     faceCtx.fill();
-
-    // Cross-hair
-    const cx2 = cx * faceCanvasEl.width;
-    const cy2 = cy * faceCanvasEl.height;
-    faceCtx.strokeStyle = 'rgba(120,200,255,0.5)';
-    faceCtx.lineWidth = 1;
-    faceCtx.beginPath();
-    faceCtx.moveTo(cx2 - 12, cy2); faceCtx.lineTo(cx2 + 12, cy2);
-    faceCtx.moveTo(cx2, cy2 - 12); faceCtx.lineTo(cx2, cy2 + 12);
-    faceCtx.stroke();
-
   } else {
-    faceDetected = false;
-    updateStatus('face', false);
-    // Gently return to center
-    faceX *= 0.9;
-    faceY *= 0.9;
+    setDot('face', false);
+    faceX *= 0.92;
+    faceY *= 0.92;
   }
 }
 
-// ─── CAMERA START/STOP ────────────────────────────────────────────────────────
-let mpCamera = null;
+// ── CAMERA ────────────────────────────────────────────────────────────────────
+let mpCam = null;
 
 async function startCamera() {
   if (!faceMesh) initFaceMesh();
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 640, height: 480, facingMode: 'user' }
@@ -505,162 +463,123 @@ async function startCamera() {
     videoEl.srcObject = stream;
     await videoEl.play();
 
-    document.getElementById('webcam-preview').style.display = 'block';
-    overlayMsg.classList.add('hidden');
-    updateStatus('cam', true);
+    document.getElementById('pip').style.display = 'block';
+    overlay.classList.add('hidden');
+    setDot('cam', true);
     cameraRunning = true;
-    document.getElementById('camBtn').textContent = '⏹ Stop Camera';
-    document.getElementById('camBtn').classList.add('active');
 
-    mpCamera = new Camera(videoEl, {
-      onFrame: async () => {
-        await faceMesh.send({ image: videoEl });
-      },
-      width: 640,
-      height: 480,
+    const btn = document.getElementById('camBtn');
+    btn.textContent = 'Stop Camera';
+    btn.classList.remove('primary');
+    btn.classList.add('destructive');
+
+    mpCam = new Camera(videoEl, {
+      onFrame: async () => { await faceMesh.send({ image: videoEl }); },
+      width: 640, height: 480,
     });
-    mpCamera.start();
+    mpCam.start();
 
   } catch (err) {
     console.error('Camera error:', err);
     const msg = err.name === 'NotAllowedError'
-      ? 'Camera permission was denied. Please allow camera access in your browser and try again.'
+      ? 'Camera permission denied — please allow access in your browser settings.'
       : err.name === 'NotFoundError'
-      ? 'No camera found on this device.'
+      ? 'No camera detected on this device.'
       : 'Camera error: ' + err.message;
     alert(msg);
-    updateStatus('cam', false);
+    setDot('cam', false);
     cameraRunning = false;
-    document.getElementById('camBtn').textContent = '📷 Start Camera';
-    document.getElementById('camBtn').classList.remove('active');
   }
 }
 
 function stopCamera() {
-  if (mpCamera) { mpCamera.stop(); mpCamera = null; }
-  if (videoEl.srcObject) {
-    videoEl.srcObject.getTracks().forEach(t => t.stop());
-    videoEl.srcObject = null;
-  }
-  document.getElementById('webcam-preview').style.display = 'none';
-  updateStatus('cam', false);
-  updateStatus('face', false);
-  cameraRunning = false;
-  faceX = 0; faceY = 0;
-  document.getElementById('camBtn').textContent = '📷 Start Camera';
-  document.getElementById('camBtn').classList.remove('active');
-  overlayMsg.classList.remove('hidden');
+  if (mpCam) { mpCam.stop(); mpCam = null; }
+  if (videoEl.srcObject) { videoEl.srcObject.getTracks().forEach(t => t.stop()); videoEl.srcObject = null; }
+  document.getElementById('pip').style.display = 'none';
+  setDot('cam', false); setDot('face', false);
+  cameraRunning = false; faceX = 0; faceY = 0;
+  const btn = document.getElementById('camBtn');
+  btn.textContent = 'Start Camera';
+  btn.classList.add('primary');
+  btn.classList.remove('destructive');
+  overlay.classList.remove('hidden');
 }
 
 document.getElementById('camBtn').addEventListener('click', () => {
-  if (!cameraRunning) startCamera();
-  else stopCamera();
+  if (!cameraRunning) startCamera(); else stopCamera();
 });
 
-// ─── MODEL LOADER ─────────────────────────────────────────────────────────────
+// ── MODEL LOADING ─────────────────────────────────────────────────────────────
 const gltfLoader = new THREE.GLTFLoader();
-const objLoader = new THREE.OBJLoader();
+const objLoader  = new THREE.OBJLoader();
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  loadModelFile(file);
-  e.target.value = '';
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  loadFile(f); e.target.value = '';
 });
 
-function loadModelFile(file) {
+function loadFile(file) {
   const url = URL.createObjectURL(file);
   const ext = file.name.split('.').pop().toLowerCase();
-
-  overlayMsg.classList.remove('hidden');
-  overlayMsg.querySelector('.big').textContent = '⏳';
-  overlayMsg.querySelector('.msg').textContent = 'Loading model…';
+  overlay.classList.remove('hidden');
+  overlay.querySelector('.icon').textContent = '⏳';
+  overlay.querySelector('p').innerHTML = 'Loading model…';
 
   if (ext === 'glb' || ext === 'gltf') {
-    gltfLoader.load(url, (gltf) => {
-      setModel(gltf.scene, url);
-    }, undefined, (err) => {
-      alert('Error loading GLTF: ' + err.message);
-      overlayMsg.classList.add('hidden');
-    });
+    gltfLoader.load(url, g => placeModel(g.scene, url), undefined, err => { alert('GLTF error: ' + err.message); overlay.classList.add('hidden'); });
   } else if (ext === 'obj') {
-    objLoader.load(url, (obj) => {
-      // Auto-assign material if missing
-      obj.traverse(child => {
-        if (child.isMesh && !child.material.color) {
-          child.material = new THREE.MeshStandardMaterial({ color: 0x8877ff, metalness: 0.3, roughness: 0.4 });
-        }
-      });
-      setModel(obj, url);
-    }, undefined, (err) => {
-      alert('Error loading OBJ: ' + err.message);
-      overlayMsg.classList.add('hidden');
-    });
+    objLoader.load(url, obj => {
+      obj.traverse(c => { if (c.isMesh) c.material = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.5, roughness: 0.3 }); });
+      placeModel(obj, url);
+    }, undefined, err => { alert('OBJ error: ' + err.message); overlay.classList.add('hidden'); });
   } else {
-    alert('Unsupported format. Please use GLB, GLTF, or OBJ.');
-    overlayMsg.classList.add('hidden');
+    alert('Use GLB, GLTF, or OBJ.'); overlay.classList.add('hidden');
   }
 }
 
-function setModel(object, blobUrl) {
-  // Center and scale
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  const scale = 2.5 / maxDim;
-
-  object.scale.setScalar(scale);
-  object.position.sub(center.multiplyScalar(scale));
-
-  object.traverse(child => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
-    }
-  });
-
+function placeModel(obj, blobUrl) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const sz  = box.getSize(new THREE.Vector3());
+  const ctr = box.getCenter(new THREE.Vector3());
+  const sc  = 2.6 / Math.max(sz.x, sz.y, sz.z);
+  obj.scale.setScalar(sc);
+  obj.position.sub(ctr.multiplyScalar(sc));
+  obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
   modelGroup.clear();
-  modelGroup.add(object);
-
+  modelGroup.add(obj);
   URL.revokeObjectURL(blobUrl);
-  overlayMsg.classList.add('hidden');
-  updateStatus('model', true);
+  overlay.classList.add('hidden');
+  setDot('model', true);
 }
 
-// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
-const mainEl = document.getElementById('main');
-
-mainEl.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-mainEl.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-mainEl.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('active');
-  const file = e.dataTransfer.files[0];
-  if (file) loadModelFile(file);
+mainEl.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('active'); });
+mainEl.addEventListener('dragleave', ()  => dropZone.classList.remove('active'));
+mainEl.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('active');
+  const f = e.dataTransfer.files[0]; if (f) loadFile(f);
 });
 
-// ─── RESET ────────────────────────────────────────────────────────────────────
+// ── RESET ─────────────────────────────────────────────────────────────────────
 document.getElementById('resetBtn').addEventListener('click', () => {
   makeDefaultCube();
-  faceX = 0; faceY = 0; smoothX = 0; smoothY = 0;
+  faceX = faceY = smoothX = smoothY = 0;
   modelGroup.rotation.set(0, 0, 0);
+  overlay.querySelector('.icon').textContent = '⬡';
+  overlay.querySelector('p').innerHTML = 'Click <strong>Start Camera</strong> to enable face-tracking parallax. Drop a GLB, GLTF, or OBJ to load a custom model.';
 });
 
-// ─── STATUS DOTS ─────────────────────────────────────────────────────────────
-function updateStatus(which, ok) {
-  const dot = document.getElementById('dot-' + which);
-  if (!dot) return;
-  dot.className = 'status-dot ' + (ok ? (which === 'face' ? 'green' : 'green') : 'red');
-  if (!ok) dot.className = 'status-dot';
+// ── STATUS DOTS ───────────────────────────────────────────────────────────────
+function setDot(which, on) {
+  const d = document.getElementById('dot-' + which);
+  if (d) { d.className = 'dot ' + (on ? 'on' : 'off'); }
 }
-updateStatus('model', true);
 
-// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'c' || e.key === 'C') document.getElementById('camBtn').click();
-  if (e.key === 'r' || e.key === 'R') document.getElementById('resetBtn').click();
+// ── KEYS ──────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'c') document.getElementById('camBtn').click();
+  if (e.key === 'r') document.getElementById('resetBtn').click();
 });
 </script>
 </body>
