@@ -326,11 +326,18 @@ function makeDefaultCube() {
 }
 makeDefaultCube();
 
-// Environment map for reflections
-const pmremGenerator = new THREE.PMREMGenerator(renderer);
-pmremGenerator.compileEquirectangularShader();
-const envTexture = pmremGenerator.fromScene(new THREE.RoomEnvironment()).texture;
-scene.environment = envTexture;
+// Environment map (graceful fallback if PMREMGenerator fails)
+try {
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  pmremGenerator.compileEquirectangularShader();
+  const neutralScene = new THREE.Scene();
+  neutralScene.background = new THREE.Color(0x444466);
+  const envTexture = pmremGenerator.fromScene(neutralScene).texture;
+  scene.environment = envTexture;
+  pmremGenerator.dispose();
+} catch (e) {
+  console.warn('PMREMGenerator skipped:', e);
+}
 
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
 function onResize() {
@@ -515,8 +522,17 @@ async function startCamera() {
     mpCamera.start();
 
   } catch (err) {
-    alert('Camera access denied or unavailable: ' + err.message);
+    console.error('Camera error:', err);
+    const msg = err.name === 'NotAllowedError'
+      ? 'Camera permission was denied. Please allow camera access in your browser and try again.'
+      : err.name === 'NotFoundError'
+      ? 'No camera found on this device.'
+      : 'Camera error: ' + err.message;
+    alert(msg);
     updateStatus('cam', false);
+    cameraRunning = false;
+    document.getElementById('camBtn').textContent = '📷 Start Camera';
+    document.getElementById('camBtn').classList.remove('active');
   }
 }
 
